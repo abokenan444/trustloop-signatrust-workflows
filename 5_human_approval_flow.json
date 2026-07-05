@@ -1,0 +1,203 @@
+{
+  "name": "TrustLoop + Signatrust: Human Approval Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "high_risk_ai_action",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-1",
+      "name": "High Risk AI Action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trustloop.live/api/intercept",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.TRUSTLOOP_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"tool_name\": \"high_risk_action\", \"arguments\": {{JSON.stringify($json.body)}}, \"agent_name\": \"n8n-workflow\"}",
+        "options": {}
+      },
+      "id": "trustloop-1",
+      "name": "TrustLoop Policy Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "value2": "pending_approval"
+            }
+          ]
+        }
+      },
+      "id": "if-status-1",
+      "name": "Is Pending Approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { action: 'waiting_human', approval_id: $('TrustLoop Policy Check').item.json.approval_id };"
+      },
+      "id": "wait-1",
+      "name": "Wait for Human",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { action: 'blocked', reason: $('TrustLoop Policy Check').item.json.message };"
+      },
+      "id": "block-1",
+      "name": "Handle Blocked Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { action: 'executed', timestamp: new Date().toISOString() };"
+      },
+      "id": "execute-1",
+      "name": "Execute After Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.signatrust.net/v1/receipts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SIGNATRUST_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\": \"action_human_approved\", \"payload\": {{JSON.stringify($json)}}, \"metadata\": {\"governed_by\": \"TrustLoop\"}}",
+        "options": {}
+      },
+      "id": "signatrust-1",
+      "name": "Signatrust Seal Receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        800,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "High Risk AI Action": {
+      "main": [
+        [
+          {
+            "node": "TrustLoop Policy Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TrustLoop Policy Check": {
+      "main": [
+        [
+          {
+            "node": "Is Pending Approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Pending Approval?": {
+      "main": [
+        [
+          {
+            "node": "Wait for Human",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Blocked Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Human": {
+      "main": [
+        [
+          {
+            "node": "Execute After Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute After Approval": {
+      "main": [
+        [
+          {
+            "node": "Signatrust Seal Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0"
+}

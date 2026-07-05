@@ -1,0 +1,21 @@
+---
+title: "Single Workflow Pattern: Govern → Execute → Prove"
+---
+flowchart LR
+    A["🤖 AI Agent"] --> B["🛡️ TrustLoop\nPolicy Check"]
+    B -->|Allowed| C["⚡ Execute\nAction"]
+    B -->|Blocked| D["❌ Denied\n+ Audit Log"]
+    B -->|Pending| E["👤 Human\nApproval"]
+    E -->|Approved| C
+    C --> F["🔐 Signatrust\nSeal Receipt"]
+    F --> G["✅ Verified\nDecision Receipt"]
+    G --> H["📨 Notify\nSlack/Email"]
+
+    style A fill:#37474f,color:#fff
+    style B fill:#1a237e,color:#fff
+    style C fill:#1b5e20,color:#fff
+    style D fill:#b71c1c,color:#fff
+    style E fill:#e65100,color:#fff
+    style F fill:#4a148c,color:#fff
+    style G fill:#006064,color:#fff
+    style H fill:#263238,color:#fff

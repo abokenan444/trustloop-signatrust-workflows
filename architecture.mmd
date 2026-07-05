@@ -1,0 +1,41 @@
+---
+title: "TrustLoop + Signatrust: AI Governance Pipeline"
+---
+flowchart TD
+    subgraph GOVERN["🛡️ GOVERN (TrustLoop)"]
+        direction TB
+        A[AI Agent Request] --> B[TrustLoop Policy Check]
+        B --> C{Decision}
+        C -->|BLOCKED| D[❌ Action Denied]
+        C -->|PENDING| E[⏳ Human Approval Required]
+        C -->|ALLOWED| F[✅ Proceed]
+    end
+
+    subgraph EXECUTE["⚡ EXECUTE"]
+        direction TB
+        F --> G[Execute Action]
+        E -->|Approved| G
+    end
+
+    subgraph PROVE["🔐 PROVE (Signatrust)"]
+        direction TB
+        G --> H[Generate Decision Receipt]
+        H --> I[Ed25519 Signature]
+        I --> J[SHA-256 Hash Chain]
+        J --> K[Append-Only Ledger]
+        K --> L[✅ Independently Verifiable]
+    end
+
+    subgraph SCENARIOS["📋 5 Production Workflows"]
+        direction LR
+        S1[💳 Payment Approval]
+        S2[💰 Customer Refund]
+        S3[🔒 PII Access]
+        S4[📄 Document Generation]
+        S5[👤 Human Approval]
+    end
+
+    style GOVERN fill:#1a237e,color:#fff
+    style EXECUTE fill:#1b5e20,color:#fff
+    style PROVE fill:#4a148c,color:#fff
+    style SCENARIOS fill:#263238,color:#fff

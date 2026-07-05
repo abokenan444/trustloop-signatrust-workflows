@@ -1,0 +1,179 @@
+{
+  "name": "TrustLoop + Signatrust: PII Access Governance",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai_pii_access_request",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-1",
+      "name": "AI PII Access Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trustloop.live/api/intercept",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.TRUSTLOOP_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"tool_name\": \"access_customer_data\", \"arguments\": {{JSON.stringify($json.body)}}, \"agent_name\": \"n8n-workflow\"}",
+        "options": {}
+      },
+      "id": "trustloop-1",
+      "name": "TrustLoop Policy Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.allowed}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-1",
+      "name": "Is Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { action: 'executed', timestamp: new Date().toISOString() };"
+      },
+      "id": "execute-1",
+      "name": "Fetch Database Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.signatrust.net/v1/receipts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SIGNATRUST_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\": \"pii_data_accessed\", \"payload\": {{JSON.stringify($json)}}, \"metadata\": {\"governed_by\": \"TrustLoop\"}}",
+        "options": {}
+      },
+      "id": "signatrust-1",
+      "name": "Signatrust Seal Receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        800,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { action: 'blocked', reason: $('TrustLoop Policy Check').item.json.message };"
+      },
+      "id": "block-1",
+      "name": "Handle Blocked Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "AI PII Access Request": {
+      "main": [
+        [
+          {
+            "node": "TrustLoop Policy Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TrustLoop Policy Check": {
+      "main": [
+        [
+          {
+            "node": "Is Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Database Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Blocked Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Database Record": {
+      "main": [
+        [
+          {
+            "node": "Signatrust Seal Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0"
+}
