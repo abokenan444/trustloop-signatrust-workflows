@@ -1,10 +1,27 @@
-# TrustLoop + Signatrust Integration Pack
+<p align="center">
+  <img src="partnership_banner.png" alt="TrustLoop × Signatrust" width="800" />
+</p>
 
-**Govern → Execute → Prove**
+<h1 align="center">TrustLoop × Signatrust</h1>
+<h3 align="center">Govern → Execute → Prove</h3>
 
-A production-ready integration pack that combines [TrustLoop](https://trustloop.live) (AI governance layer) with [Signatrust](https://signatrust.net) (cryptographic decision receipts) to create a complete, verifiable AI governance pipeline.
+<p align="center">
+  <strong>A production-ready integration pack that combines AI governance (TrustLoop) with cryptographic decision receipts (Signatrust) to create a complete, verifiable AI governance pipeline for n8n.</strong>
+</p>
 
-![Architecture](architecture.png)
+<p align="center">
+  <a href="https://trustloop.live">TrustLoop</a> · <a href="https://signatrust.net">Signatrust</a> · <a href="https://signatrust.net/adr">ADR Spec</a>
+</p>
+
+---
+
+## Live Workflow in n8n
+
+> This is a real screenshot from n8n — not a mockup. Every workflow in this pack can be imported and executed immediately.
+
+![n8n Canvas Screenshot](n8n_canvas_screenshot.png)
+
+*AI Payment Request → TrustLoop Policy Check → Branch (Allowed / Blocked) → Execute Wire Transfer → Signatrust Seal Receipt*
 
 ---
 
@@ -101,6 +118,24 @@ A high-risk AI action triggers TrustLoop's human-in-the-loop approval. The reque
 
 ---
 
+## What's Real vs. What's Simulated
+
+> **Transparency note:** This section clarifies the current state of the integration.
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **TrustLoop Policy Check** | Real API | Uses `POST https://api.trustloop.live/api/intercept` — the actual TrustLoop endpoint |
+| **Signatrust Seal Receipt** | Real API | Uses `POST https://api.signatrust.net/v1/receipts` — the actual Signatrust endpoint |
+| **Webhook Trigger** | Real | Standard n8n Webhook node — works immediately |
+| **Execute Action (Code node)** | Simulated | Placeholder for your actual business logic (Stripe, bank API, CRM, etc.) |
+| **Notification (Slack/Email)** | Template | Replace with your actual Slack webhook or SMTP credentials |
+
+**Bottom line:** The governance pipeline (TrustLoop → decision → Signatrust) is fully real. The business actions in between are templates you customize for your use case.
+
+**Upgrading to Phase 2:** When official TrustLoop and Signatrust n8n nodes are available, simply replace the HTTP Request nodes with the native nodes. The workflow structure remains identical.
+
+---
+
 ## Integration Architecture
 
 ```
@@ -179,15 +214,34 @@ Authorization: Bearer sk_your_key
 
 ---
 
-## Phase 1 → Phase 2 → Phase 3
+## Roadmap: Phase 1 → Phase 2 → Phase 3
 
-This integration pack represents **Phase 1** — fully functional using HTTP Request nodes and publicly available APIs. No custom integration from either team is required.
+This integration pack represents **Phase 1** — fully functional using HTTP Request nodes and publicly available APIs.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | **Phase 1** | HTTP-based integration using available APIs | ✅ Complete |
 | **Phase 2** | Replace HTTP with official TrustLoop/Signatrust n8n nodes | 🔜 Next |
 | **Phase 3** | Native integration (TrustLoop triggers Signatrust automatically) | 🎯 Goal |
+
+**Phase 2** requires no architectural changes — only swapping HTTP Request nodes for native community nodes. The workflow logic, branching, and data flow remain identical.
+
+**Phase 3** is the partnership goal: TrustLoop could offer a built-in option like:
+```
+After approval → Generate Signatrust Receipt
+```
+
+---
+
+## For TrustLoop Documentation
+
+> This section is designed so TrustLoop can reference this integration directly in their docs.
+
+**Suggested placement:** Under "Examples" or "Integrations" in TrustLoop documentation.
+
+**One-liner:** *"Combine TrustLoop governance with Signatrust cryptographic receipts for a complete Govern → Execute → Prove pipeline."*
+
+**Link:** `https://github.com/abokenan444/trustloop-signatrust-workflows`
 
 ---
 
