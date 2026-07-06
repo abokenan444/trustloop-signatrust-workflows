@@ -32,7 +32,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\"tool_name\": \"issue_refund\", \"arguments\": {{JSON.stringify($json.body)}}, \"agent_name\": \"n8n-workflow\"}",
+        "jsonBody": "{\"tool_name\": \"issue_refund\", \"arguments\": {{JSON.stringify($json.body)}}, \"agent_name\": \"n8n-refund-workflow\"}",
         "options": {}
       },
       "id": "trustloop-1",
@@ -66,7 +66,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return { action: 'executed', timestamp: new Date().toISOString() };"
+        "jsCode": "const input = $('AI Refund Request').item.json.body;\nreturn {\n  action: 'refund_processed',\n  amount: input.amount || 0,\n  currency: input.currency || 'USD',\n  customer_id: input.customer_id || 'unknown',\n  reason: input.reason || 'customer_request',\n  timestamp: new Date().toISOString()\n};"
       },
       "id": "execute-1",
       "name": "Process Stripe Refund",
@@ -80,19 +80,23 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.signatrust.net/v1/receipts",
+        "url": "https://signatrust.net/api/v1/n8n/receipts",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.SIGNATRUST_API_KEY}}"
+              "name": "X-API-Key",
+              "value": "={{$env.SIGNATRUST_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\"action\": \"customer_refund_issued\", \"payload\": {{JSON.stringify($json)}}, \"metadata\": {\"governed_by\": \"TrustLoop\"}}",
+        "jsonBody": "={{JSON.stringify({\"decision\": \"Approved refund of \" + ($json.currency || 'USD') + ' ' + ($json.amount || 0) + \" for customer \" + ($json.customer_id || 'unknown') + \" — reason: \" + ($json.reason || 'customer_request') + \" — governed by TrustLoop policy\", \"agent_id\": \"n8n-refund-workflow\", \"action\": \"customer_refund_issued\", \"metadata\": {\"governed_by\": \"TrustLoop\", \"amount\": $json.amount, \"customer_id\": $json.customer_id}})}}",
         "options": {}
       },
       "id": "signatrust-1",
@@ -106,7 +110,44 @@
     },
     {
       "parameters": {
-        "jsCode": "return { action: 'blocked', reason: $('TrustLoop Policy Check').item.json.message };"
+        "method": "GET",
+        "url": "=https://signatrust.net/api/v1/n8n/receipts/{{$json.receipt_id}}/verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.SIGNATRUST_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "verify-1",
+      "name": "Verify Receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1000,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const receipt = $('Signatrust Seal Receipt').item.json;\nconst verification = $json;\nreturn {\n  status: 'completed',\n  receipt_id: receipt.receipt_id,\n  verified: verification.valid,\n  share_url: receipt.share_url,\n  hash: receipt.hash,\n  signature: receipt.signature\n};"
+      },
+      "id": "respond-1",
+      "name": "Return Audit Trail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  status: 'blocked',\n  reason: $('TrustLoop Policy Check').item.json.message || 'Policy violation detected',\n  action: 'refund_denied'\n};"
       },
       "id": "block-1",
       "name": "Handle Blocked Action",
@@ -169,11 +210,33 @@
           }
         ]
       ]
+    },
+    "Signatrust Seal Receipt": {
+      "main": [
+        [
+          {
+            "node": "Verify Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Receipt": {
+      "main": [
+        [
+          {
+            "node": "Return Audit Trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1.0"
+  "versionId": "2.0"
 }

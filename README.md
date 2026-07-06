@@ -125,7 +125,7 @@ A high-risk AI action triggers TrustLoop's human-in-the-loop approval. The reque
 | Component | Status | Details |
 |-----------|--------|---------|
 | **TrustLoop Policy Check** | Real API | Uses `POST https://api.trustloop.live/api/intercept` — the actual TrustLoop endpoint |
-| **Signatrust Seal Receipt** | Real API | Uses `POST https://api.signatrust.net/v1/receipts` — the actual Signatrust endpoint |
+| **Signatrust Seal Receipt** | Real API | Uses `POST https://signatrust.net/api/v1/n8n/receipts` — the actual Signatrust endpoint |
 | **Webhook Trigger** | Real | Standard n8n Webhook node — works immediately |
 | **Execute Action (Code node)** | Simulated | Placeholder for your actual business logic (Stripe, bank API, CRM, etc.) |
 | **Notification (Slack/Email)** | Template | Replace with your actual Slack webhook or SMTP credentials |
@@ -192,23 +192,29 @@ x-api-key: tl_your_key
 
 ### Signatrust — Seal Decision Receipt
 ```http
-POST https://api.signatrust.net/v1/receipts
-Authorization: Bearer sk_your_key
+POST https://signatrust.net/api/v1/n8n/receipts
+X-API-Key: sk_live_your_key
+Content-Type: application/json
 
 {
+  "decision": "Approved wire transfer of USD 5000 to supplier@bank.com — governed by TrustLoop policy",
+  "agent_id": "n8n-payment-workflow",
   "action": "wire_transfer_executed",
-  "payload": { "amount": 5000, "to": "supplier@bank.com" },
-  "metadata": { "governed_by": "TrustLoop" }
+  "metadata": { "governed_by": "TrustLoop", "amount": 5000 }
 }
 ```
 
 **Response:**
 ```json
 {
+  "ok": true,
   "receipt_id": "STR-A1B2C3D4E5",
-  "signature": "ed25519:...",
-  "hash": "sha256:...",
-  "verify_url": "https://signatrust.net/verify/STR-A1B2C3D4E5"
+  "sequence": 489,
+  "hash": "sha256:9c8cdd0d46ccb4e1...",
+  "signature": "+iJvZ0Tw1mGD7m5/yyTTn5TJAS2t...",
+  "algorithm": "ed25519",
+  "verify_url": "https://signatrust.net/api/v1/n8n/receipts/STR-A1B2C3D4E5/verify",
+  "share_url": "https://signatrust.net/verify?id=STR-A1B2C3D4E5"
 }
 ```
 
@@ -276,4 +282,5 @@ MIT
 - **Signatrust:** [signatrust.net](https://signatrust.net)
 - **TrustLoop API Docs:** [trustloop.live/docs.html](https://trustloop.live/docs.html)
 - **Signatrust ADR Spec:** [signatrust.net/adr](https://signatrust.net/adr)
+- **Signatrust n8n Docs:** [signatrust.net/n8n](https://signatrust.net/n8n)
 - **n8n Community:** [community.n8n.io](https://community.n8n.io)
